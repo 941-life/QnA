@@ -15,13 +15,13 @@ public class QuizServer {
 
         try {
             serverSocket = new ServerSocket(PORT);
-            System.out.println("퀴즈 서버가 실행 중입니다...");
+            System.out.println("Quiz server is running..");
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("클라이언트가 연결되었습니다!");
+                System.out.println("Connect Client!");
 
-                // 여러 클라이언트 접속을 위해 threadpool 추가
+                // 여러 클라이언트 접속을 위해 threadpool 사용
                 threadPool.execute(new ClientHandler(clientSocket));
             }
         } catch (IOException e) {
@@ -30,25 +30,24 @@ public class QuizServer {
             shutdownServer();
         }
     }
-
     private static void loadQuestions() {
-        questions.add(new Question("IPv4의 고갈 문제의 단기 처방 목적으로 마련 된 기술은?", "NAT"));
-        questions.add(new Question("server가 모든 host들에게 DHCP offer 을 전송해 ip 주소를 얻는 방법은?", "broadcast"));
-        questions.add(new Question("Java의 기본 자료형 개수는?", "8"));
+        // 각 질문에 대해 여러 정답을 List 형태로 저장
+        questions.add(new Question("IPv4의 고갈 문제의 단기 처방 목적으로 마련 된 기술은?", Arrays.asList("NAT", "Network Address Translation","네트워크 주소 변환")));
+        questions.add(new Question("server가 모든 host들에게 DHCP offer 을 전송해 ip 주소를 얻는 방법은?", Arrays.asList("broadcast", "브로드캐스트","Broadcast")));
+        questions.add(new Question("Java의 기본 자료형 개수는?", Arrays.asList("8", "8개")));
     }
-
     // 서버 종료
     private static void shutdownServer() {
         try {
             if (serverSocket != null) serverSocket.close();
             threadPool.shutdown();
-            System.out.println("서버가 종료되었습니다.");
+            System.out.println("Close Server");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    // 클라이언트 처리!
+    // 클라이언트 처리
     private static class ClientHandler implements Runnable {
         private final Socket clientSocket;
         private int score = 0;
@@ -68,15 +67,15 @@ public class QuizServer {
                     out.println("Q:" + question.getQuestion());
 
                     String answer = in.readLine();
-                    if (answer != null && answer.equalsIgnoreCase("A:" + question.getAnswer())) {
+                    if (answer != null && question.isCorrectAnswer(answer.substring(2))) {
                         score++;
-                        out.println("R:정답입니다!");
+                        out.println("R:Correct");
                     } else {
-                        out.println("R:오답입니다");
+                        out.println("R:Incorrect");
                     }
                 }
                 // 최종 점수 전송
-                out.println("S:최종 점수는 " + score + "/" + questions.size());
+                out.println("S:Your score is " + score + "/" + questions.size());
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
@@ -89,22 +88,20 @@ public class QuizServer {
         }
     }
 
-    // 질문 클래스 정의
+    // 질문 클래스
     private static class Question {
         private final String question;
-        private final String answer;
-
-        public Question(String question, String answer) {
+        private final List<String> correctAnswers;
+        public Question(String question, List<String> correctAnswers) {
             this.question = question;
-            this.answer = answer;
+            this.correctAnswers = correctAnswers;
         }
-
         public String getQuestion() {
             return question;
         }
-
-        public String getAnswer() {
-            return answer;
+        // 사용자가 입력한 답변이 정답 리스트에 있는지 검사
+        public boolean isCorrectAnswer(String answer) {
+            return correctAnswers.stream().anyMatch(correctAnswer -> correctAnswer.equalsIgnoreCase(answer.trim()));
         }
     }
 }
